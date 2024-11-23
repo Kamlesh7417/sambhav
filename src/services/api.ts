@@ -37,16 +37,16 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-  }
+  },
 });
 
 export const fetchOrders = async (): Promise<Order[]> => {
   try {
     const response = await api.get('');
     return response.data.map((order: any) => ({
-      order_id: order.order || '',
-      order_status: order.status || 'Open',
-      order_placed_timestamp: order.Date || new Date().toISOString(),
+      order_id: order.order || '', // Mapping API field `order` to `order_id`
+      order_status: order.status || 'Open', // Defaulting status to 'Open' if not provided
+      order_placed_timestamp: order.Date || new Date().toISOString(), // Defaulting to current timestamp
       customer: order.customer,
       date: order.date,
       type: order.type,
@@ -55,20 +55,22 @@ export const fetchOrders = async (): Promise<Order[]> => {
       destination: order.destination,
       items: order.items,
       total: order.total,
-      customsInfo: order.customsInfo
+      customsInfo: order.customsInfo,
     }));
   } catch (error) {
     const apiError: ApiError = {
       message: 'An error occurred while fetching orders',
-      isConnectionError: false
+      isConnectionError: false,
     };
 
     if (error instanceof AxiosError) {
       if (!error.response) {
-        apiError.message = 'Unable to connect to the server. Please check your connection and try again.';
+        apiError.message =
+          'Unable to connect to the server. Please check your connection and try again.';
         apiError.isConnectionError = true;
       } else {
-        apiError.message = error.response.data?.message || 'Failed to fetch orders';
+        apiError.message =
+          error.response.data?.message || 'Failed to fetch orders';
         apiError.status = error.response.status;
       }
     }
