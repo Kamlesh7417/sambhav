@@ -1,15 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   ShoppingBagIcon,
   MapPinIcon,
   CalendarIcon,
   TagIcon,
   DocumentTextIcon,
   TruckIcon,
-  XMarkIcon
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { useOrders } from '../../hooks/useOrders';
+import axios from 'axios';
+
+interface Order {
+  order_id: string;
+  order_status: string;
+  order_placed_timestamp: string;
+  customer?: string;
+  type?: string;
+  priority?: string;
+  origin?: string;
+  destination?: string;
+  items?: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+  total?: number;
+  customsInfo?: {
+    exportLicense: string;
+    hsCode: string;
+    declaredValue: number;
+  };
+}
 
 interface OrderDetailsProps {
   orderId: string;
@@ -17,10 +39,54 @@ interface OrderDetailsProps {
 }
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId, onClose }) => {
-  const { orders } = useOrders();
-  const order = orders[orderId];
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!order) return null;
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`https://susowh1c2f.execute-api.us-east-1.amazonaws.com/v1/orders/${orderId}`);
+        setOrder(response.data);
+      } catch (err) {
+        setError('Failed to fetch order details.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderDetails();
+  }, [orderId]);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <p className="text-white">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <p className="text-red-500">{error}</p>
+        <button onClick={onClose} className="ml-4 px-4 py-2 bg-gray-800 text-white rounded-lg">
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return null;
+  }
+
+  const orderDate = order.order_placed_timestamp
+    ? new Date(order.order_placed_timestamp).toLocaleDateString()
+    : 'Unknown Date';
+
+  const totalAmount = order.total ?? 0;
 
   return (
     <motion.div
@@ -35,14 +101,12 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId, onClose }) => {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         className="glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 border-b bg-gradient-to-r from-primary-50 to-primary-100 flex justify-between items-start">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Order #{order.id}</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Created on {new Date(order.date).toLocaleDateString()}
-            </p>
+            <h2 className="text-2xl font-bold text-gray-900">Order #{order.order_id}</h2>
+            <p className="text-sm text-gray-600 mt-1">Created on {orderDate}</p>
           </div>
           <button
             onClick={onClose}
@@ -60,22 +124,26 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId, onClose }) => {
               <div className="flex items-center space-x-2">
                 <ShoppingBagIcon className="h-5 w-5 text-gray-400" />
                 <span className="text-gray-600">Customer:</span>
-                <span className="font-medium">{order.customer}</span>
+                <span className="font-medium">{order.customer || 'Unknown'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <TagIcon className="h-5 w-5 text-gray-400" />
                 <span className="text-gray-600">Type:</span>
-                <span className="font-medium">{order.type}</span>
+                <span className="font-medium">{order.type || 'Not Specified'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <CalendarIcon className="h-5 w-5 text-gray-400" />
                 <span className="text-gray-600">Priority:</span>
-                <span className={`font-medium ${
-                  order.priority === 'Urgent' ? 'text-red-600' :
-                  order.priority === 'Express' ? 'text-orange-600' :
-                  'text-green-600'
-                }`}>
-                  {order.priority}
+                <span
+                  className={`font-medium ${
+                    order.priority === 'Urgent'
+                      ? 'text-red-600'
+                      : order.priority === 'Express'
+                      ? 'text-orange-600'
+                      : 'text-green-600'
+                  }`}
+                >
+                  {order.priority || 'Normal'}
                 </span>
               </div>
             </div>
@@ -88,23 +156,23 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId, onClose }) => {
               <div className="flex items-center space-x-2">
                 <MapPinIcon className="h-5 w-5 text-gray-400" />
                 <span className="text-gray-600">Origin:</span>
-                <span className="font-medium">{order.origin}</span>
+                <span className="font-medium">{order.origin || 'Unknown'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <MapPinIcon className="h-5 w-5 text-gray-400" />
                 <span className="text-gray-600">Destination:</span>
-                <span className="font-medium">{order.destination}</span>
+                <span className="font-medium">{order.destination || 'Unknown'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <TruckIcon className="h-5 w-5 text-gray-400" />
                 <span className="text-gray-600">Status:</span>
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                  order.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
-                  order.status === 'Shipped' ? 'bg-blue-100 text-blue-800' :
-                  order.status === 'Delivered' ? 'bg-green-100 text-green-800' :
+                  order.order_status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
+                  order.order_status === 'Shipped' ? 'bg-blue-100 text-blue-800' :
+                  order.order_status === 'Delivered' ? 'bg-green-100 text-green-800' :
                   'bg-red-100 text-red-800'
                 }`}>
-                  {order.status}
+                  {order.order_status}
                 </span>
               </div>
             </div>
@@ -124,7 +192,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId, onClose }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white/50 divide-y divide-gray-200">
-                  {order.items.map((item, index) => (
+                  {order.items?.map((item, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.quantity}</td>
@@ -139,43 +207,11 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ orderId, onClose }) => {
                   <tr>
                     <td colSpan={3} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">Total Amount:</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-600 font-bold">
-                      ₹{order.total.toLocaleString()}
+                      ₹{totalAmount.toLocaleString()}
                     </td>
                   </tr>
                 </tfoot>
               </table>
-            </div>
-          </div>
-
-          {/* Documents */}
-          <div className="md:col-span-2 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Required Documents</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {order.customsInfo && (
-                <>
-                  <div className="glass-card p-4 flex items-center space-x-3">
-                    <DocumentTextIcon className="h-5 w-5 text-primary-600" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Export License</p>
-                      <p className="text-xs text-gray-500">{order.customsInfo.exportLicense}</p>
-                    </div>
-                  </div>
-                  <div className="glass-card p-4 flex items-center space-x-3">
-                    <DocumentTextIcon className="h-5 w-5 text-primary-600" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">HS Code</p>
-                      <p className="text-xs text-gray-500">{order.customsInfo.hsCode}</p>
-                    </div>
-                  </div>
-                  <div className="glass-card p-4 flex items-center space-x-3">
-                    <DocumentTextIcon className="h-5 w-5 text-primary-600" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Declared Value</p>
-                      <p className="text-xs text-gray-500">₹{order.customsInfo.declaredValue.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
