@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 {/* Update the login link in the navigation */}
 <Link to="/seller/login" className="btn btn-secondary">
   Login
