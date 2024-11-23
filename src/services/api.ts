@@ -112,7 +112,7 @@ export const fetchOrders = async (): Promise<Order[]> => {
 
 export const fetchOrderById = async (orderId: string): Promise<Order> => {
   try {
-    const response = await api.get(`/orders/${orderId}`);
+    const response = await api.get(`/orders`);
     console.log('API Response:', response);
     return transformDynamoDBResponse(response.data);
   } catch (error) {
