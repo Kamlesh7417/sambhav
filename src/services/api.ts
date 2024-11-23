@@ -32,7 +32,7 @@ export interface ApiError {
 const API_URL = 'https://j85j5e0gx4.execute-api.us-east-1.amazonaws.com/default/aws-exportedge-dev-order-detail-api-lambda';
 
 const api = axios.create({
-  baseURL: API_URL,
+  //baseURL: API_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -85,7 +85,7 @@ const transformDynamoDBResponse = (data: any): Order => {
 
 export const fetchOrders = async (): Promise<Order[]> => {
   try {
-    const response = await api.get('/orders');
+    const response = await api.get(API_URL);
     console.log('API Response:', response);
     
     const items = Array.isArray(response.data) ? response.data : [response.data];
