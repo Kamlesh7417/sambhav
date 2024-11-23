@@ -2,7 +2,7 @@ import React from 'react';
 import { Search, Filter } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useOrders } from '../hooks/useOrders';
-import { Order } from '../types/global'; // Ensure correct path to global.d.ts
+import { Order } from '../types/global'; // Import the Order interface
 
 interface OrderFilterProps {
   onFilterChange: (orderId: string) => void;
@@ -10,7 +10,8 @@ interface OrderFilterProps {
 }
 
 const OrderFilter: React.FC<OrderFilterProps> = ({ onFilterChange, selectedOrderId }) => {
-  const { orders }: { orders: Order[] } = useOrders(); // Ensuring correct typing for orders
+  const { orders: ordersRecord } = useOrders(); // Assume `useOrders` returns a record
+  const orders: Order[] = Object.values(ordersRecord); // Convert the record to an array
 
   return (
     <div className="flex flex-col md:flex-row gap-4 mb-6">
