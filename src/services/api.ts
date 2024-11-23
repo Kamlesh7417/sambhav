@@ -35,16 +35,41 @@ const api = axios.create({
   baseURL: API_URL,
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Content-Type': 'application/json'
   },
-  withCredentials: true // Enable if you need cookies to be sent
+  withCredentials: false // Changed to false since we're not using cookies
 });
 
-// Response interceptor to handle errors globally
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+export const fetchOrders = async (): Promise<Order[]> => {
+  try {
+    const response = await api.get('/orders');
+    
+    // Ensure we have an array to map over
+    const ordersData = Array.isArray(response.data) ? response.data : [response.data];
+    
+    return ordersData.map((order: any) => ({
+      order_id: order.order_id?.S || '', // Handle DynamoDB string type
+      order_status: order.order_status?.S || 'Open',
+      order_placed_timestamp: order.order_placed_timestamp?.S || new Date().toISOString(),
+      customer: order.customer?.S,
+      date: order.date?.S,
+      type: order.type?.S,
+      priority: order.priority?.S,
+      origin: order.origin?.S,
+      destination: order.destination?.S,
+      items: order.items?.L?.map((item: any) => ({
+        name: item.M.name.S,
+        quantity: parseInt(item.M.quantity.N),
+        price: parseFloat(item.M.price.N)
+      })) || [],
+      total: order.total?.N ? parseFloat(order.total.N) : 0,
+      customsInfo: order.customsInfo?.M ? {
+        exportLicense: order.customsInfo.M.exportLicense.S,
+        hsCode: order.customsInfo.M.hsCode.S,
+        declaredValue: parseFloat(order.customsInfo.M.declaredValue.N)
+      } : null
+    }));
+  } catch (error) {
     const apiError: ApiError = {
       message: 'An error occurred while fetching orders',
       isConnectionError: false,
@@ -59,83 +84,52 @@ api.interceptors.response.use(
         apiError.status = error.response.status;
       }
     }
-    return Promise.reject(apiError);
-  }
-);
-
-export const fetchOrders = async (): Promise<Order[]> => {
-  try {
-    const response = await api.get('/orders');
-    
-    // Ensure we have an array to map over
-    const ordersData = Array.isArray(response.data) ? response.data : [response.data];
-    
-    return ordersData.map((order: any) => ({
-      order_id: order.order_id || '', // Updated to match DynamoDB field name
-      order_status: order.order_status || 'Open',
-      order_placed_timestamp: order.order_placed_timestamp || new Date().toISOString(),
-      customer: order.customer,
-      date: order.date,
-      type: order.type,
-      priority: order.priority,
-      origin: order.origin,
-      destination: order.destination,
-      items: Array.isArray(order.items) ? order.items : [],
-      total: typeof order.total === 'number' ? order.total : 0,
-      customsInfo: order.customsInfo || null
-    }));
-  } catch (error) {
-    // If the error is already formatted by our interceptor, just throw it
-    if ((error as ApiError).isConnectionError !== undefined) {
-      throw error;
-    }
-    
-    // Otherwise, format it
-    const apiError: ApiError = {
-      message: 'An unexpected error occurred while fetching orders',
-      isConnectionError: false,
-    };
     throw apiError;
   }
 };
 
-// Function to fetch a single order
 export const fetchOrderById = async (orderId: string): Promise<Order> => {
   try {
     const response = await api.get(`/orders/${orderId}`);
     const order = response.data;
     
     return {
-      order_id: order.order_id || '',
-      order_status: order.order_status || 'Open',
-      order_placed_timestamp: order.order_placed_timestamp || new Date().toISOString(),
-      customer: order.customer,
-      date: order.date,
-      type: order.type,
-      priority: order.priority,
-      origin: order.origin,
-      destination: order.destination,
-      items: Array.isArray(order.items) ? order.items : [],
-      total: typeof order.total === 'number' ? order.total : 0,
-      customsInfo: order.customsInfo || null
+      order_id: order.order_id?.S || '',
+      order_status: order.order_status?.S || 'Open',
+      order_placed_timestamp: order.order_placed_timestamp?.S || new Date().toISOString(),
+      customer: order.customer?.S,
+      date: order.date?.S,
+      type: order.type?.S,
+      priority: order.priority?.S,
+      origin: order.origin?.S,
+      destination: order.destination?.S,
+      items: order.items?.L?.map((item: any) => ({
+        name: item.M.name.S,
+        quantity: parseInt(item.M.quantity.N),
+        price: parseFloat(item.M.price.N)
+      })) || [],
+      total: order.total?.N ? parseFloat(order.total.N) : 0,
+      customsInfo: order.customsInfo?.M ? {
+        exportLicense: order.customsInfo.M.exportLicense.S,
+        hsCode: order.customsInfo.M.hsCode.S,
+        declaredValue: parseFloat(order.customsInfo.M.declaredValue.N)
+      } : null
     };
   } catch (error) {
-    if ((error as ApiError).isConnectionError !== undefined) {
-      throw error;
-    }
-    
     const apiError: ApiError = {
       message: 'An error occurred while fetching the order',
       isConnectionError: false,
     };
-    
+
     if (error instanceof AxiosError) {
-      if (error.response?.status === 404) {
+      if (!error.response) {
+        apiError.message = 'Unable to connect to the server. Please check your connection and try again.';
+        apiError.isConnectionError = true;
+      } else if (error.response.status === 404) {
         apiError.message = 'Order not found';
       }
-      apiError.status = error.response?.status;
+      apiError.status = error.response.status;
     }
-    
     throw apiError;
   }
 };
