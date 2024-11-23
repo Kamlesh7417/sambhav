@@ -1,15 +1,13 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 interface AIAssistantProps {
   loading: boolean;
-  suggestions: any;
+  suggestions: Record<string, any> | null; // Ensure suggestions are a record or null
   error?: string | null;
   onApply: () => void;
 }
-const i18nContent: ReactI18NextChildren = someUnknownValue as ReactI18NextChildren;
-// Use `i18nContent` where required
 
 const AIAssistant: React.FC<AIAssistantProps> = ({
   loading,
@@ -52,7 +50,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({
         <Sparkles className="h-5 w-5 text-primary-600" />
         <h3 className="text-lg font-semibold text-gray-900">AI Suggestions</h3>
       </div>
-      
+
       <div className="space-y-4">
         {Object.entries(suggestions).map(([key, value]) => (
           <div key={key} className="flex justify-between items-center">
