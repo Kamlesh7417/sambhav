@@ -37,6 +37,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin':'*',
+    'Access-Control-Allow-Headers':'Access-Control-Allow-Headers',
     'Access-Control-Allow-Methods':'GET,PUT,POST,DELETE,PATCH,OPTIONS',
     'Accept': 'application/json'
   },
