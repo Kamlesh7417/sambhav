@@ -8,6 +8,8 @@ interface AIAssistantProps {
   error?: string | null;
   onApply: () => void;
 }
+const i18nContent: ReactI18NextChildren = someUnknownValue as ReactI18NextChildren;
+// Use `i18nContent` where required
 
 const AIAssistant: React.FC<AIAssistantProps> = ({
   loading,
