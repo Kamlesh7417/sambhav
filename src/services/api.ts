@@ -29,38 +29,22 @@ export interface ApiError {
   isConnectionError?: boolean;
 }
 
-const API_URL = 'https://susowh1c2f.execute-api.us-east-1.amazonaws.com/v1/orders';
+const API_URL = 'https://susowh1c2f.execute-api.us-east-1.amazonaws.com/v1';
 
 const api = axios.create({
   baseURL: API_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin':'*',
-    'Access-Control-Allow-Headers':'Origin, X-Requested-With, Content-Type, Accept, Authorization',
-    'Access-Control-Allow-Methods':'GET,PUT,POST,DELETE,PATCH,OPTIONS',
     'Accept': 'application/json'
   },
+  withCredentials: true // Enable if you need cookies to be sent
 });
 
-export const fetchOrders = async (): Promise<Order[]> => {
-  try {
-    const response = await api.get('');
-    return response.data.map((order: any) => ({
-      order_id: order.order || '', // Mapping API field `order` to `order_id`
-      order_status: order.status || 'Open', // Defaulting status to 'Open' if not provided
-      order_placed_timestamp: order.Date || new Date().toISOString(), // Defaulting to current timestamp
-      customer: order.customer,
-      date: order.date,
-      type: order.type,
-      priority: order.priority,
-      origin: order.origin,
-      destination: order.destination,
-      items: order.items,
-      total: order.total,
-      customsInfo: order.customsInfo,
-    }));
-  } catch (error) {
+// Response interceptor to handle errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
     const apiError: ApiError = {
       message: 'An error occurred while fetching orders',
       isConnectionError: false,
@@ -68,16 +52,90 @@ export const fetchOrders = async (): Promise<Order[]> => {
 
     if (error instanceof AxiosError) {
       if (!error.response) {
-        apiError.message =
-          'Unable to connect to the server. Please check your connection and try again.';
+        apiError.message = 'Unable to connect to the server. Please check your connection and try again.';
         apiError.isConnectionError = true;
       } else {
-        apiError.message =
-          error.response.data?.message || 'Failed to fetch orders';
+        apiError.message = error.response.data?.message || 'Failed to fetch orders';
         apiError.status = error.response.status;
       }
     }
+    return Promise.reject(apiError);
+  }
+);
 
+export const fetchOrders = async (): Promise<Order[]> => {
+  try {
+    const response = await api.get('/orders');
+    
+    // Ensure we have an array to map over
+    const ordersData = Array.isArray(response.data) ? response.data : [response.data];
+    
+    return ordersData.map((order: any) => ({
+      order_id: order.order_id || '', // Updated to match DynamoDB field name
+      order_status: order.order_status || 'Open',
+      order_placed_timestamp: order.order_placed_timestamp || new Date().toISOString(),
+      customer: order.customer,
+      date: order.date,
+      type: order.type,
+      priority: order.priority,
+      origin: order.origin,
+      destination: order.destination,
+      items: Array.isArray(order.items) ? order.items : [],
+      total: typeof order.total === 'number' ? order.total : 0,
+      customsInfo: order.customsInfo || null
+    }));
+  } catch (error) {
+    // If the error is already formatted by our interceptor, just throw it
+    if ((error as ApiError).isConnectionError !== undefined) {
+      throw error;
+    }
+    
+    // Otherwise, format it
+    const apiError: ApiError = {
+      message: 'An unexpected error occurred while fetching orders',
+      isConnectionError: false,
+    };
+    throw apiError;
+  }
+};
+
+// Function to fetch a single order
+export const fetchOrderById = async (orderId: string): Promise<Order> => {
+  try {
+    const response = await api.get(`/orders/${orderId}`);
+    const order = response.data;
+    
+    return {
+      order_id: order.order_id || '',
+      order_status: order.order_status || 'Open',
+      order_placed_timestamp: order.order_placed_timestamp || new Date().toISOString(),
+      customer: order.customer,
+      date: order.date,
+      type: order.type,
+      priority: order.priority,
+      origin: order.origin,
+      destination: order.destination,
+      items: Array.isArray(order.items) ? order.items : [],
+      total: typeof order.total === 'number' ? order.total : 0,
+      customsInfo: order.customsInfo || null
+    };
+  } catch (error) {
+    if ((error as ApiError).isConnectionError !== undefined) {
+      throw error;
+    }
+    
+    const apiError: ApiError = {
+      message: 'An error occurred while fetching the order',
+      isConnectionError: false,
+    };
+    
+    if (error instanceof AxiosError) {
+      if (error.response?.status === 404) {
+        apiError.message = 'Order not found';
+      }
+      apiError.status = error.response?.status;
+    }
+    
     throw apiError;
   }
 };
