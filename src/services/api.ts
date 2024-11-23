@@ -29,29 +29,6 @@ export interface ApiError {
   isConnectionError?: boolean;
 }
 
-// DynamoDB response types
-interface DynamoDBItem {
-  S?: string;
-  N?: string;
-  L?: Array<any>;
-  M?: Record<string, any>;
-}
-
-interface DynamoDBOrder {
-  order_id: DynamoDBItem;
-  order_status: DynamoDBItem;
-  order_placed_timestamp: DynamoDBItem;
-  customer?: DynamoDBItem;
-  date?: DynamoDBItem;
-  type?: DynamoDBItem;
-  priority?: DynamoDBItem;
-  origin?: DynamoDBItem;
-  destination?: DynamoDBItem;
-  items?: DynamoDBItem;
-  total?: DynamoDBItem;
-  customsInfo?: DynamoDBItem;
-}
-
 const API_URL = 'https://susowh1c2f.execute-api.us-east-1.amazonaws.com/v1';
 
 const api = axios.create({
@@ -59,38 +36,37 @@ const api = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
-  },
-  withCredentials: false
+  }
 });
 
-const transformDynamoDBOrder = (order: DynamoDBOrder): Order => ({
-  order_id: order.order_id?.S || '',
-  order_status: order.order_status?.S || 'Open',
-  order_placed_timestamp: order.order_placed_timestamp?.S || new Date().toISOString(),
-  customer: order.customer?.S,
-  date: order.date?.S,
-  type: order.type?.S,
-  priority: order.priority?.S,
-  origin: order.origin?.S,
-  destination: order.destination?.S,
-  items: order.items?.L?.map(item => ({
-    name: item.M.name.S || '',
-    quantity: parseInt(item.M.quantity.N || '0'),
-    price: parseFloat(item.M.price.N || '0')
-  })),
-  total: order.total?.N ? parseFloat(order.total.N) : undefined,
-  customsInfo: order.customsInfo?.M ? {
-    exportLicense: order.customsInfo.M.exportLicense.S || '',
-    hsCode: order.customsInfo.M.hsCode.S || '',
-    declaredValue: parseFloat(order.customsInfo.M.declaredValue.N || '0')
+const transformDynamoDBResponse = (item: any): Order => ({
+  order_id: item.order_id?.S || '',
+  order_status: item.order_status?.S || 'Open',
+  order_placed_timestamp: item.order_placed_timestamp?.S || new Date().toISOString(),
+  customer: item.customer?.S,
+  date: item.date?.S,
+  type: item.type?.S,
+  priority: item.priority?.S,
+  origin: item.origin?.S,
+  destination: item.destination?.S,
+  items: item.items?.L?.map((i: any) => ({
+    name: i.M.name.S || '',
+    quantity: Number(i.M.quantity.N || 0),
+    price: Number(i.M.price.N || 0)
+  })) || [],
+  total: item.total?.N ? Number(item.total.N) : undefined,
+  customsInfo: item.customsInfo?.M ? {
+    exportLicense: item.customsInfo.M.exportLicense.S || '',
+    hsCode: item.customsInfo.M.hsCode.S || '',
+    declaredValue: Number(item.customsInfo.M.declaredValue.N || 0)
   } : undefined
 });
 
 export const fetchOrders = async (): Promise<Order[]> => {
   try {
     const response = await api.get('/orders');
-    const ordersData: DynamoDBOrder[] = Array.isArray(response.data) ? response.data : [response.data];
-    return ordersData.map(transformDynamoDBOrder);
+    const items = Array.isArray(response.data) ? response.data : [response.data];
+    return items.map(transformDynamoDBResponse);
   } catch (error) {
     const apiError: ApiError = {
       message: 'An error occurred while fetching orders',
@@ -113,8 +89,7 @@ export const fetchOrders = async (): Promise<Order[]> => {
 export const fetchOrderById = async (orderId: string): Promise<Order> => {
   try {
     const response = await api.get(`/orders/${orderId}`);
-    const orderData: DynamoDBOrder = response.data;
-    return transformDynamoDBOrder(orderData);
+    return transformDynamoDBResponse(response.data);
   } catch (error) {
     const apiError: ApiError = {
       message: 'An error occurred while fetching the order',
@@ -126,8 +101,8 @@ export const fetchOrderById = async (orderId: string): Promise<Order> => {
         apiError.message = 'Unable to connect to the server. Please check your connection and try again.';
         apiError.isConnectionError = true;
       } else {
-        apiError.message = error.response?.data?.message || 'Failed to fetch order';
-        apiError.status = error.response?.status;
+        apiError.message = error.response.data?.message || 'Failed to fetch order';
+        apiError.status = error.response.status;
       }
     }
     throw apiError;
