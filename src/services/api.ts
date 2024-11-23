@@ -110,27 +110,3 @@ export const fetchOrders = async (): Promise<Order[]> => {
   }
 };
 
-export const fetchOrderById = async (orderId: string): Promise<Order> => {
-  try {
-    const response = await api.get(`/orders`);
-    console.log('API Response:', response);
-    return transformDynamoDBResponse(response.data);
-  } catch (error) {
-    console.error('API Error:', error);
-    const apiError: ApiError = {
-      message: 'An error occurred while fetching the order',
-      isConnectionError: false,
-    };
-
-    if (error instanceof AxiosError) {
-      if (!error.response) {
-        apiError.message = 'Unable to connect to the server. Please check your connection and try again.';
-        apiError.isConnectionError = true;
-      } else {
-        apiError.message = error.response.data?.message || 'Failed to fetch order';
-        apiError.status = error.response.status;
-      }
-    }
-    throw apiError;
-  }
-};
