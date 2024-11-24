@@ -29,15 +29,14 @@ export interface ApiError {
   isConnectionError?: boolean;
 }
 
-const API_URL = 'https://susowh1c2f.execute-api.us-east-1.amazonaws.com/v1/orders ';
+const API_URL = 'https://9jhvnrb7y2.execute-api.us-east-1.amazonaws.com/dev/orders';
 
 const api = axios.create({
   //baseURL: API_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
-  },
-  withCredentials: true
+  }
 });
 
 const transformDynamoDBResponse = (data: any): Order => {
