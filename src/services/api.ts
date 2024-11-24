@@ -36,9 +36,9 @@ const api = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Headers':'*',
-    'Access-Control-Allow-Methods':'*',
-    'Access-Control-Origin-Headers':'*'
+    'access-control-allow-headers':'*',
+    'access-control-allow-methods':'*',
+    'access-control-allow-origin':'*'
   }
 });
 
