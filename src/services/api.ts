@@ -29,7 +29,7 @@ export interface ApiError {
   isConnectionError?: boolean;
 }
 
-const API_URL = 'https://j85j5e0gx4.execute-api.us-east-1.amazonaws.com/default/aws-exportedge-dev-order-detail-api-lambda';
+const API_URL = 'https://susowh1c2f.execute-api.us-east-1.amazonaws.com/v1/orders ';
 
 const api = axios.create({
   //baseURL: API_URL,
